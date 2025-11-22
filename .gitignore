@@ -29,5 +29,5 @@ amplify_outputs*
 amplifyconfiguration*
 
 # packages config
-package-lock.json
+# package-lock.json
 
