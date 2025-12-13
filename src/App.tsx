@@ -3,7 +3,7 @@ import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { AgGridReact } from 'ag-grid-react';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import {
@@ -24,12 +24,19 @@ function App() {
   const { user, signOut } = useAuthenticator();
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
   const [navigationOpen, setNavigationOpen] = useState(true);
+  const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
     client.models.Todo.observeQuery().subscribe({
       next: (data) => setTodos([...data.items]),
     });
   }, []);
+
+  const filteredTodos = todos.filter((todo) => {
+    if (filter === "completed") return todo.state === "completed";
+    if (filter === "pending") return todo.state === "pending" || !todo.state;
+    return true; // "all" shows everything
+  });
 
   function createTodo() {
     const content = window.prompt("Todo content");
@@ -40,6 +47,17 @@ function App() {
 
   function deleteTodo(id: string) {
     client.models.Todo.delete({ id });
+  }
+
+  function toggleTodoState(id: string, currentState: string | null | undefined) {
+    const newState = currentState === "completed" ? "pending" : "completed";
+    client.models.Todo.update({ id, state: newState });
+  }
+
+  function updateTodoContent(id: string, content: string) {
+    if (content.trim()) {
+      client.models.Todo.update({ id, content: content.trim() });
+    }
   }
 
   const formatDate = (date: Date | string | undefined) => {
@@ -63,6 +81,38 @@ function App() {
       field: "content" as const,
       headerName: "Content",
       flex: 2,
+      editable: true,
+      onCellValueChanged: (params) => {
+        if (params.data?.id && params.newValue !== params.oldValue) {
+          updateTodoContent(params.data.id, params.newValue);
+        }
+      },
+    },
+    {
+      field: "state" as const,
+      headerName: "State",
+      flex: 1,
+      cellRenderer: (params: ICellRendererParams<Schema["Todo"]["type"]>) => {
+        const state = params.value || "pending";
+        const id = params.data?.id;
+        return (
+          <Button
+            variant="inline-link"
+            onClick={() => id && toggleTodoState(id, state)}
+          >
+            <span style={{ 
+              padding: "4px 8px", 
+              borderRadius: "4px",
+              backgroundColor: state === "completed" ? "#d4edda" : "#fff3cd",
+              color: state === "completed" ? "#155724" : "#856404",
+              fontWeight: 500,
+              cursor: "pointer",
+            }}>
+              {state === "completed" ? "Completed" : "Pending"}
+            </span>
+          </Button>
+        );
+      },
     },
     {
       field: "createdAt" as const,
@@ -105,7 +155,7 @@ function App() {
           {
             type: "button",
             text: "Logout",
-            iconName: "redo",
+            iconName: "external",
             ariaLabel: "Logout",
             onClick: signOut,
           },
@@ -121,10 +171,24 @@ function App() {
       <AppLayout
         navigation={
           <SideNavigation
+            activeHref={filter === "all" ? "#/" : filter === "completed" ? "#/completed" : "#/pending"}
+            onFollow={(event) => {
+              event.preventDefault();
+              if (event.detail.href === "#/") setFilter("all");
+              else if (event.detail.href === "#/completed") setFilter("completed");
+              else if (event.detail.href === "#/pending") setFilter("pending");
+            }}
             items={[
-              { type: "link", text: "All Todos", href: "#/" },
-              { type: "link", text: "Completed", href: "#/completed" },
-              { type: "link", text: "Pending", href: "#/pending" },
+              { 
+                type: "expandable-link-group", 
+                text: "All Todos", 
+                href: "#/",
+                defaultExpanded: true,
+                items: [
+                  { type: "link", text: "Completed", href: "#/completed" },
+                  { type: "link", text: "Pending", href: "#/pending" },
+                ]
+              },
             ]}
             header={{
               href: "#/",
@@ -141,7 +205,7 @@ function App() {
                 </Button>
                 <div className="ag-theme-quartz" style={{ height: "600px", width: "100%" }}>
                   <AgGridReact
-                    rowData={todos}
+                    rowData={filteredTodos}
                     columnDefs={columnDefs}
                     pagination={true}
                     paginationPageSize={10}
@@ -156,7 +220,7 @@ function App() {
             <Container>
               <TextContent>
                 <p>
-                  🥳 App successfully hosted. Try creating a new todo or managing your existing ones.
+                  © 2025 Todo Manager. All rights reserved.
                 </p>
               </TextContent>
             </Container>

@@ -26,6 +26,9 @@ This library is licensed under the MIT-0 License. See the LICENSE file.
 
 ## Commands
 
+aws sso login --profile <your-profile-name>
+ - login to AWS CLI
+
 npm run dev
  - to start FE in local server, connected to cloud sandbox env, http://localhost:5173
 
