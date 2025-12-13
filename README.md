@@ -23,3 +23,11 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
+
+## Commands
+
+npm run dev
+ - to start FE in local server, connected to cloud sandbox env, http://localhost:5173
+
+npx ampx sandbox
+ - to update the BE changes in the cloud sandbox env to test BE of Amplify
