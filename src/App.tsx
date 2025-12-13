@@ -3,6 +3,7 @@ import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { AgGridReact } from 'ag-grid-react';
+import type { ColDef } from 'ag-grid-community';
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import {
@@ -46,10 +47,9 @@ function App() {
     const dateObj = typeof date === "string" ? new Date(date) : date;
     return dateObj.toLocaleString();
   };
-
-  const columnDefs = [
+  const columnDefs: ColDef<Schema["Todo"]["type"]>[] = [
     {
-      field: "id",
+      field: "id" as const,
       headerName: "ID",
       flex: 1.5,
       minWidth: 240,
@@ -60,18 +60,18 @@ function App() {
       ),
     },
     {
-      field: "content",
+      field: "content" as const,
       headerName: "Content",
       flex: 2,
     },
     {
-      field: "createdAt",
+      field: "createdAt" as const,
       headerName: "Created",
       flex: 1.5,
       valueFormatter: (params: { value: string | Date }) => formatDate(params.value),
     },
     {
-      field: "updatedAt",
+      field: "updatedAt" as const,
       headerName: "Updated",
       flex: 1.5,
       valueFormatter: (params: { value: string | Date }) => formatDate(params.value),
@@ -89,6 +89,7 @@ function App() {
       ),
     },
   ];
+  
 
   return (
     <>
@@ -98,13 +99,13 @@ function App() {
           {
             type: "button",
             text: user?.signInDetails?.loginId ?? "User",
-            iconName: "user",
+            iconName: "user-profile",
             ariaLabel: "Current user",
           },
           {
             type: "button",
             text: "Logout",
-            iconName: "external",
+            iconName: "redo",
             ariaLabel: "Logout",
             onClick: signOut,
           },
@@ -114,11 +115,6 @@ function App() {
           overflowMenuTriggerText: "More",
           searchDismissIconAriaLabel: "Close search",
           searchIconAriaLabel: "Search",
-          settingsIconAriaLabel: "Settings",
-          notificationIconAriaLabel: "Notifications",
-          keyboardShortcutsIconAriaLabel: "Keyboard shortcuts",
-          helpIconAriaLabel: "Help",
-          title: "Navigation",
         }}
       />
 
