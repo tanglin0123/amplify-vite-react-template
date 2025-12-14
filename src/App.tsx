@@ -15,16 +15,31 @@ import {
   Container,
   TextContent,
   TopNavigation,
+  BreadcrumbGroup,
+  Select,
 } from "@cloudscape-design/components";
 import "@cloudscape-design/global-styles/index.css";
 
 const client = generateClient<Schema>();
+
+type ModuleType = "task-management" | "planning-analytics";
 
 function App() {
   const { user, signOut } = useAuthenticator();
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
   const [navigationOpen, setNavigationOpen] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [currentModule, setCurrentModule] = useState<ModuleType>("task-management");
+  const [utcMode, setUtcMode] = useState<Set<string>>(new Set());
+
+  const getTimezoneName = () => {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZoneName: "short",
+    });
+    const parts = formatter.formatToParts(new Date());
+    return parts.find((p) => p.type === "timeZoneName")?.value || "Local";
+  };
 
   useEffect(() => {
     client.models.Todo.observeQuery().subscribe({
@@ -60,19 +75,25 @@ function App() {
     }
   }
 
-  const formatDate = (date: Date | string | undefined) => {
+  const formatDate = (date: Date | string | undefined, isUtc: boolean = false) => {
     if (!date) return "N/A";
     const dateObj = typeof date === "string" ? new Date(date) : date;
-    return dateObj.toLocaleString();
+    if (isUtc) {
+      return dateObj.toLocaleString("en-US", { timeZone: "UTC" }) + " UTC";
+    }
+    const localTz = getTimezoneName();
+    return dateObj.toLocaleString("en-US", { 
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone 
+    }) + " " + localTz;
   };
   const columnDefs: ColDef<Schema["Todo"]["type"]>[] = [
     {
       field: "id" as const,
       headerName: "ID",
-      flex: 1.5,
-      minWidth: 240,
+      flex: 0.7,
+      minWidth: 140,
       cellRenderer: (params: { value: string }) => (
-        <span style={{ fontFamily: "monospace", fontSize: "0.9em", color: "#333" }}>
+        <span style={{ fontFamily: "monospace", fontSize: "0.75em", color: "#333", wordBreak: "break-all" }}>
           {params.value}
         </span>
       ),
@@ -80,7 +101,8 @@ function App() {
     {
       field: "content" as const,
       headerName: "Content",
-      flex: 2,
+      flex: 3,
+      minWidth: 250,
       editable: true,
       onCellValueChanged: (params) => {
         if (params.data?.id && params.newValue !== params.oldValue) {
@@ -91,7 +113,8 @@ function App() {
     {
       field: "state" as const,
       headerName: "State",
-      flex: 1,
+      flex: 1.2,
+      minWidth: 140,
       cellRenderer: (params: ICellRendererParams<Schema["Todo"]["type"]>) => {
         const state = params.value || "pending";
         const id = params.data?.id;
@@ -117,18 +140,61 @@ function App() {
     {
       field: "createdAt" as const,
       headerName: "Created",
-      flex: 1.5,
-      valueFormatter: (params: { value: string | Date }) => formatDate(params.value),
+      flex: 1.8,
+      minWidth: 220,
+      cellRenderer: (params: ICellRendererParams<Schema["Todo"]["type"]>) => {
+        const dateKey = `created-${params.data?.id}`;
+        const isUtc = utcMode.has(dateKey);
+        return (
+          <span
+            onClick={() => {
+              const newUtcMode = new Set(utcMode);
+              if (isUtc) {
+                newUtcMode.delete(dateKey);
+              } else {
+                newUtcMode.add(dateKey);
+              }
+              setUtcMode(newUtcMode);
+            }}
+            style={{ cursor: "pointer", color: "#0972d3", textDecoration: "underline" }}
+            title="Click to toggle timezone"
+          >
+            {formatDate(params.value, isUtc)}
+          </span>
+        );
+      },
     },
     {
       field: "updatedAt" as const,
       headerName: "Updated",
-      flex: 1.5,
-      valueFormatter: (params: { value: string | Date }) => formatDate(params.value),
+      flex: 1.8,
+      minWidth: 220,
+      cellRenderer: (params: ICellRendererParams<Schema["Todo"]["type"]>) => {
+        const dateKey = `updated-${params.data?.id}`;
+        const isUtc = utcMode.has(dateKey);
+        return (
+          <span
+            onClick={() => {
+              const newUtcMode = new Set(utcMode);
+              if (isUtc) {
+                newUtcMode.delete(dateKey);
+              } else {
+                newUtcMode.add(dateKey);
+              }
+              setUtcMode(newUtcMode);
+            }}
+            style={{ cursor: "pointer", color: "#0972d3", textDecoration: "underline" }}
+            title="Click to toggle timezone"
+          >
+            {formatDate(params.value, isUtc)}
+          </span>
+        );
+      },
     },
     {
       headerName: "Actions",
-      flex: 0.8,
+      flex: 0.9,
+      minWidth: 100,
       cellRenderer: (params: { data: Schema["Todo"]["type"] }) => (
         <Button
           onClick={() => deleteTodo(params.data.id)}
@@ -140,11 +206,76 @@ function App() {
     },
   ];
   
+  const renderTodoManagerContent = () => (
+    <SpaceBetween size="m">
+      <BreadcrumbGroup
+        items={[
+          { text: "Workspace", href: "#/" },
+          { text: "Task Management", href: "#/task-management" }
+        ]}
+      />
+      <Container header={<Header variant="h2">Your Tasks</Header>}>
+        <SpaceBetween size="m" direction="vertical">
+          <SpaceBetween size="s" direction="horizontal">
+            <Button onClick={createTodo} variant="primary" iconName="add-plus">
+              Create Task
+            </Button>
+            <Select
+              selectedOption={{ label: filter === "all" ? "All" : filter === "completed" ? "Completed" : "Pending", value: filter }}
+              onChange={(event) => setFilter(event.detail.selectedOption.value || "all")}
+              options={[
+                { label: "All", value: "all" },
+                { label: "Completed", value: "completed" },
+                { label: "Pending", value: "pending" },
+              ]}
+              selectedAriaLabel="Filter todos"
+            />
+          </SpaceBetween>
+          <div className="ag-theme-quartz" style={{ height: "600px", width: "100%" }}>
+            <AgGridReact
+              rowData={filteredTodos}
+              columnDefs={columnDefs}
+              pagination={true}
+              paginationPageSize={10}
+              suppressPropertyNamesCheck={true}
+              autoSizeStrategy={{
+                type: "fitGridWidth",
+              }}
+            />
+          </div>
+        </SpaceBetween>
+      </Container>
+      <Container>
+        <TextContent>
+          <p>
+            © 2025 Workspace. All rights reserved.
+          </p>
+        </TextContent>
+      </Container>
+    </SpaceBetween>
+  );
+
+  const renderPlanningAnalyticsContent = () => (
+    <SpaceBetween size="m">
+      <BreadcrumbGroup
+        items={[
+          { text: "Workspace", href: "#/" },
+          { text: "Planning & Analytics", href: "#/planning-analytics" }
+        ]}
+      />
+      <Container header={<Header variant="h2">Planning & Analytics</Header>}>
+        <TextContent>
+          <p>Planning & Analytics module coming soon...</p>
+        </TextContent>
+      </Container>
+    </SpaceBetween>
+  );
+  
 
   return (
     <>
       <TopNavigation
-        identity={{ href: "#/", title: "Todo Manager" }}
+        identity={{ href: "#/", title: "Workspace" }}
         utilities={[
           {
             type: "button",
@@ -171,60 +302,26 @@ function App() {
       <AppLayout
         navigation={
           <SideNavigation
-            activeHref={filter === "all" ? "#/" : filter === "completed" ? "#/completed" : "#/pending"}
+            activeHref={currentModule === "task-management" ? "#/task-management" : "#/planning-analytics"}
             onFollow={(event) => {
               event.preventDefault();
-              if (event.detail.href === "#/") setFilter("all");
-              else if (event.detail.href === "#/completed") setFilter("completed");
-              else if (event.detail.href === "#/pending") setFilter("pending");
+              if (event.detail.href === "#/task-management") setCurrentModule("task-management");
+              else if (event.detail.href === "#/planning-analytics") setCurrentModule("planning-analytics");
             }}
             items={[
-              { 
-                type: "expandable-link-group", 
-                text: "All Todos", 
-                href: "#/",
-                defaultExpanded: true,
-                items: [
-                  { type: "link", text: "Completed", href: "#/completed" },
-                  { type: "link", text: "Pending", href: "#/pending" },
-                ]
-              },
+              { type: "section-group", title: "Modules", items: [
+                { type: "link", text: "Task Management", href: "#/task-management" },
+                { type: "link", text: "Planning & Analytics", href: "#/planning-analytics" },
+              ]},
             ]}
             header={{
               href: "#/",
-              text: "Todo App",
+              text: "Workspace",
             }}
           />
         }
         content={
-          <SpaceBetween size="m">
-            <Container header={<Header variant="h2">Your Todos</Header>}>
-              <SpaceBetween size="m" direction="vertical">
-                <Button onClick={createTodo} variant="primary" iconName="add-plus">
-                  Create Todo
-                </Button>
-                <div className="ag-theme-quartz" style={{ height: "600px", width: "100%" }}>
-                  <AgGridReact
-                    rowData={filteredTodos}
-                    columnDefs={columnDefs}
-                    pagination={true}
-                    paginationPageSize={10}
-                    suppressPropertyNamesCheck={true}
-                    autoSizeStrategy={{
-                      type: "fitGridWidth",
-                    }}
-                  />
-                </div>
-              </SpaceBetween>
-            </Container>
-            <Container>
-              <TextContent>
-                <p>
-                  © 2025 Todo Manager. All rights reserved.
-                </p>
-              </TextContent>
-            </Container>
-          </SpaceBetween>
+          currentModule === "task-management" ? renderTodoManagerContent() : renderPlanningAnalyticsContent()
         }
         contentType="default"
         navigationOpen={navigationOpen}
