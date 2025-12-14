@@ -193,7 +193,7 @@ export function TaskManagement({ utcMode, setUtcMode }: TaskManagementProps) {
         <Button
           onClick={() => deleteTodo(params.data.id)}
           variant="inline-icon"
-          iconName="close"
+          iconName="remove"
           ariaLabel="Delete task"
         />
       ),
@@ -202,7 +202,7 @@ export function TaskManagement({ utcMode, setUtcMode }: TaskManagementProps) {
 
   return (
     <SpaceBetween size="m">
-      <div style={{ padding: "1rem 2rem 0 2rem" }}>
+      <div style={{ padding: "0" }}>
         <BreadcrumbGroup
           items={[
             { text: "Workspace", href: "#/" },
@@ -210,8 +210,8 @@ export function TaskManagement({ utcMode, setUtcMode }: TaskManagementProps) {
           ]}
         />
       </div>
-      <div style={{ padding: "0 2rem" }}>
-        <Container header={<Header variant="h2">Your Tasks</Header>}>
+      <div style={{ padding: "0" }}>
+        <Container header={<Header variant="h2">Tasks</Header>}>
           <SpaceBetween size="m" direction="vertical">
             <SpaceBetween size="s" direction="horizontal">
               <Button onClick={createTodo} variant="primary" iconName="add-plus">

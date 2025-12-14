@@ -9,7 +9,7 @@ import {
 export function PlanningAnalytics() {
   return (
     <SpaceBetween size="m">
-      <div style={{ padding: "1rem 2rem 0 2rem" }}>
+      <div style={{ padding: "0" }}>
         <BreadcrumbGroup
           items={[
             { text: "Workspace", href: "#/" },
@@ -17,7 +17,7 @@ export function PlanningAnalytics() {
           ]}
         />
       </div>
-      <div style={{ padding: "0 2rem 2rem 2rem" }}>
+      <div style={{ padding: "0" }}>
         <Container header={<Header variant="h2">Planning & Analytics</Header>}>
           <TextContent>
             <p>Planning & Analytics module coming soon...</p>
