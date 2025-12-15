@@ -20,24 +20,33 @@ export function PlanningAnalytics() {
   const [status, setStatus] = useState<string | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const showNotification = (item: { type: string; content: string; id?: string }) => {
+    const id = item.id || `note-${Date.now()}`;
+    setNotifications([
+      {
+        ...item,
+        id,
+        dismissible: true,
+        onDismiss: () => setNotifications([]),
+      },
+    ]);
+  };
+
   const checkExecution = async (executionId: string) => {
     setChecking(true);
     setStatus("Checking execution status...");
 
-    const poll = async () => {
+    const poll = async (): Promise<boolean> => {
       const checkRes = await apiClient.get<{ status?: string; result?: any; [key: string]: any }>(
         `check?executionId=${executionId}`
       );
 
       if (!checkRes.success) {
         setError(checkRes.error || "Failed to check status");
-        setNotifications((prev) => [
-          ...prev,
-          { type: "error", content: checkRes.error || "Status check failed", dismissible: true, id: `err-${Date.now()}` },
-        ]);
+        showNotification({ type: "error", content: checkRes.error || "Status check failed" });
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         setChecking(false);
-        return;
+        return false;
       }
 
       const executionStatus = checkRes.data?.status;
@@ -46,27 +55,25 @@ export function PlanningAnalytics() {
       if (executionStatus === "SUCCEEDED" || executionStatus === "SUCCESS") {
         setStatus("Execution completed successfully!");
         setResult(executionResult || checkRes.data);
-        setNotifications((prev) => [
-          ...prev,
-          { type: "success", content: "Execution completed successfully!", dismissible: true, id: `ok-${Date.now()}` },
-        ]);
+        showNotification({ type: "success", content: "Execution completed successfully!" });
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         setChecking(false);
+        return false;
       } else if (executionStatus === "FAILED" || executionStatus === "FAILURE") {
         setError(`Execution failed: ${checkRes.data?.error || "Unknown error"}`);
-        setNotifications((prev) => [
-          ...prev,
-          { type: "error", content: `Execution failed: ${checkRes.data?.error || "Unknown error"}`, dismissible: true, id: `err-${Date.now()}` },
-        ]);
+        showNotification({ type: "error", content: `Execution failed: ${checkRes.data?.error || "Unknown error"}` });
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         setChecking(false);
+        return false;
       } else {
         setStatus(`Status: ${executionStatus || "pending"}...`);
+        return true;
       }
     };
 
     // Poll immediately, then every 2 seconds
-    await poll();
+    const shouldContinue = await poll();
+    if (!shouldContinue) return;
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     pollIntervalRef.current = setInterval(poll, 2000);
   };
@@ -85,16 +92,12 @@ export function PlanningAnalytics() {
     );
 
     if (res.success && res.data?.executionId) {
-      setNotifications([
-        { type: "success", content: `Trigger initiated with ID: ${res.data.executionId}`, dismissible: true, id: "trigger-ok" },
-      ]);
+      showNotification({ type: "success", content: `Trigger initiated with ID: ${res.data.executionId}` });
       setLoading(false);
       await checkExecution(res.data.executionId);
     } else {
       setError(res.error || `Request failed with status ${res.status}`);
-      setNotifications([
-        { type: "error", content: res.error || `Request failed with status ${res.status}`, dismissible: true, id: "trigger-err" },
-      ]);
+      showNotification({ type: "error", content: res.error || `Request failed with status ${res.status}` });
       setLoading(false);
     }
   };
