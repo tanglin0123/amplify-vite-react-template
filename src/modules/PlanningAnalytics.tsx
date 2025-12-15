@@ -11,7 +11,11 @@ import {
 import { useState, useRef } from "react";
 import { apiClient } from "../utils/apiClient";
 
-export function PlanningAnalytics() {
+interface PlanningAnalyticsProps {
+  onNavigateHome?: () => void;
+}
+
+export function PlanningAnalytics({ onNavigateHome }: PlanningAnalyticsProps) {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<{ message?: string; [key: string]: any } | null>(null);
@@ -107,9 +111,15 @@ export function PlanningAnalytics() {
       <div style={{ padding: "0" }}>
         <BreadcrumbGroup
           items={[
-            { text: "Workspace", href: "#/" },
+            { text: "MyWorkspace", href: "#/" },
             { text: "Planning & Analytics", href: "#/planning-analytics" }
           ]}
+          onFollow={(event) => {
+            event.preventDefault();
+            if (event.detail.href === "#/" && onNavigateHome) {
+              onNavigateHome();
+            }
+          }}
         />
       </div>
       <div style={{ padding: "0" }}>

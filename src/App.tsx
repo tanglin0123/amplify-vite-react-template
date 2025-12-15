@@ -6,25 +6,33 @@ import {
   TopNavigation,
   Container,
   TextContent,
+  Header,
 } from "@cloudscape-design/components";
 import "@cloudscape-design/global-styles/index.css";
 import "./App.css";
 import { TaskManagement } from "./modules/TaskManagement";
 import { PlanningAnalytics } from "./modules/PlanningAnalytics";
 
-type ModuleType = "task-management" | "planning-analytics";
+type ModuleType = "home" | "task-management" | "planning-analytics";
 
 function App() {
   const { user, signOut } = useAuthenticator();
   const [navigationOpen, setNavigationOpen] = useState(true);
-  const [currentModule, setCurrentModule] = useState<ModuleType>("task-management");
+  const [currentModule, setCurrentModule] = useState<ModuleType>("home");
   const [utcMode, setUtcMode] = useState<Set<string>>(new Set());
   
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <TopNavigation
-        identity={{ href: "#/", title: "Workspace" }}
+        identity={{ 
+          href: "#/", 
+          title: "MyWorkspace",
+          logo: {
+            src: "https://github.com/tanglin0123.png",
+            alt: "MyWorkspace Logo"
+          }
+        }}
         utilities={[
           {
             type: "button",
@@ -53,26 +61,31 @@ function App() {
           <AppLayout
             navigation={
               <SideNavigation
-                activeHref={currentModule === "task-management" ? "#/task-management" : "#/planning-analytics"}
+                activeHref={currentModule === "task-management" ? "#/task-management" : currentModule === "planning-analytics" ? "#/planning-analytics" : "#/"}
                 onFollow={(event) => {
                   event.preventDefault();
-                  if (event.detail.href === "#/task-management") setCurrentModule("task-management");
+                  if (event.detail.href === "#/") setCurrentModule("home");
+                  else if (event.detail.href === "#/task-management") setCurrentModule("task-management");
                   else if (event.detail.href === "#/planning-analytics") setCurrentModule("planning-analytics");
                 }}
                 items={[
-                  { type: "section-group", title: "Modules", items: [
-                    { type: "link", text: "Task Management", href: "#/task-management" },
-                    { type: "link", text: "Planning & Analytics", href: "#/planning-analytics" },
-                  ]},
+                  { type: "link", text: "Task Management", href: "#/task-management" },
+                  { type: "link", text: "Planning & Analytics", href: "#/planning-analytics" },
                 ]}
                 header={{
                   href: "#/",
-                  text: "Workspace",
+                  text: "Modules",
                 }}
               />
             }
             content={
-              currentModule === "task-management" ? <TaskManagement utcMode={utcMode} setUtcMode={setUtcMode} /> : <PlanningAnalytics />
+              currentModule === "home" ? (
+                <Container header={<Header variant="h1">Welcome to MyWorkspace</Header>}>
+                  <TextContent>
+                    <p>Select a module from the navigation to get started.</p>
+                  </TextContent>
+                </Container>
+              ) : currentModule === "task-management" ? <TaskManagement utcMode={utcMode} setUtcMode={setUtcMode} onNavigateHome={() => setCurrentModule("home")} /> : <PlanningAnalytics onNavigateHome={() => setCurrentModule("home")} />
             }
             contentType="default"
             navigationOpen={navigationOpen}
@@ -83,7 +96,7 @@ function App() {
           <Container>
             <TextContent>
               <p>
-                © 2025 Workspace. All rights reserved.
+                © 2025 MyWorkspace. All rights reserved.
               </p>
             </TextContent>
           </Container>

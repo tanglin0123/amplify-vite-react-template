@@ -19,9 +19,10 @@ const client = generateClient<Schema>();
 interface TaskManagementProps {
   utcMode: Set<string>;
   setUtcMode: (mode: Set<string>) => void;
+  onNavigateHome?: () => void;
 }
 
-export function TaskManagement({ utcMode, setUtcMode }: TaskManagementProps) {
+export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskManagementProps) {
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
   const [filter, setFilter] = useState<string>("all");
 
@@ -205,9 +206,15 @@ export function TaskManagement({ utcMode, setUtcMode }: TaskManagementProps) {
       <div style={{ padding: "0" }}>
         <BreadcrumbGroup
           items={[
-            { text: "Workspace", href: "#/" },
+            { text: "MyWorkspace", href: "#/" },
             { text: "Task Management", href: "#/task-management" }
           ]}
+          onFollow={(event) => {
+            event.preventDefault();
+            if (event.detail.href === "#/" && onNavigateHome) {
+              onNavigateHome();
+            }
+          }}
         />
       </div>
       <div style={{ padding: "0" }}>
