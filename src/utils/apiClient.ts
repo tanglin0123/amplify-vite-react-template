@@ -1,4 +1,4 @@
-const API_ENDPOINT = "https://aqha9p91g2.execute-api.us-west-2.amazonaws.com/prod/";
+const API_ENDPOINT = "https://zwmqhpv6ul.execute-api.us-west-2.amazonaws.com/prod/";
 
 interface ApiRequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
