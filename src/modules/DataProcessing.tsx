@@ -14,16 +14,12 @@ import {
 } from "@cloudscape-design/components";
 import { useState, useRef } from "react";
 import { apiClient } from "../utils/apiClient";
-import { AgGridReact } from "ag-grid-react";
-import type { ColDef, ICellRendererParams } from "ag-grid-community";
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-quartz.css";
 
-interface PlanningAnalyticsProps {
+interface DataProcessingProps {
   onNavigateHome?: () => void;
 }
 
-export function PlanningAnalytics({ onNavigateHome }: PlanningAnalyticsProps) {
+export function DataProcessing({ onNavigateHome }: DataProcessingProps) {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<{ message?: string; [key: string]: any } | null>(null);
@@ -34,45 +30,6 @@ export function PlanningAnalytics({ onNavigateHome }: PlanningAnalyticsProps) {
   const [itemListInput, setItemListInput] = useState<string>("");
   const [maxConcurrency, setMaxConcurrency] = useState<string>("");
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Sample data for AG Grid
-  const [gridData] = useState([
-    { id: 1, item: "sample-1", status: "pending", createdAt: new Date().toISOString() },
-    { id: 2, item: "sample-2", status: "processing", createdAt: new Date().toISOString() },
-    { id: 3, item: "sample-3", status: "completed", createdAt: new Date().toISOString() },
-  ]);
-
-  const columnDefs: ColDef[] = [
-    { field: "id", headerName: "ID", width: 60 },
-    { field: "item", headerName: "Item", flex: 1, minWidth: 150 },
-    {
-      field: "status",
-      headerName: "Status",
-      flex: 1,
-      minWidth: 120,
-      cellRenderer: (params: ICellRendererParams) => {
-        const statusColors: { [key: string]: string } = {
-          pending: "#fff3cd",
-          processing: "#cfe2ff",
-          completed: "#d1e7dd",
-        };
-        return (
-          <span
-            style={{
-              padding: "4px 8px",
-              borderRadius: "4px",
-              backgroundColor: statusColors[params.value] || "#f0f0f0",
-              color: "#333",
-              fontWeight: 500,
-            }}
-          >
-            {params.value}
-          </span>
-        );
-      },
-    },
-    { field: "createdAt", headerName: "Created At", flex: 1.5, minWidth: 200 },
-  ];
 
   const showNotification = (item: { type: string; content: string; id?: string }) => {
     const id = item.id || `note-${Date.now()}`;
@@ -191,7 +148,7 @@ export function PlanningAnalytics({ onNavigateHome }: PlanningAnalyticsProps) {
         <BreadcrumbGroup
           items={[
             { text: "MyWorkspace", href: "#/" },
-            { text: "Planning & Analytics", href: "#/planning-analytics" }
+            { text: "Data Processing", href: "#/data-processing" }
           ]}
           onFollow={(event) => {
             event.preventDefault();
@@ -202,8 +159,58 @@ export function PlanningAnalytics({ onNavigateHome }: PlanningAnalyticsProps) {
         />
       </div>
       <div style={{ padding: "0" }}>
-        <Container header={<Header variant="h2">Planning & Analytics</Header>}>
+        <Container header={<Header variant="h2">Data Processing</Header>}>
           <SpaceBetween size="m" direction="vertical">
+            <Flashbar items={notifications} />
+            <FormField label="Items">
+              <Textarea
+                value={itemListInput}
+                onChange={(event) => setItemListInput(event.detail.value)}
+                placeholder="Enter a list of items (comma-separated or one per line)"
+                rows={6}
+              />
+            </FormField>
+            <SpaceBetween size="s" direction="horizontal">
+              <FormField label="Process Type">
+                <Select
+                  selectedOption={{ label: processType.charAt(0).toUpperCase() + processType.slice(1), value: processType }}
+                  onChange={(event) => setProcessType(event.detail.selectedOption.value || "parallel")}
+                  options={[
+                    { label: "Parallel", value: "parallel" },
+                    { label: "Loop", value: "loop" },
+                    { label: "Whole", value: "whole" },
+                  ]}
+                  selectedAriaLabel="Select process type"
+                />
+              </FormField>
+              <FormField label="Max Concurrency">
+                <Input
+                  value={maxConcurrency}
+                  onChange={(event) => setMaxConcurrency(event.detail.value)}
+                  placeholder="Optional"
+                  type="number"
+                />
+              </FormField>
+            </SpaceBetween>
+            <SpaceBetween size="s" direction="horizontal">
+              <Button onClick={triggerAnalysis} variant="primary" iconName="refresh" disabled={loading || checking}>
+                Trigger Analysis
+              </Button>
+              {(loading || checking) && <StatusIndicator type="in-progress">{status || "Running…"}</StatusIndicator>}
+            </SpaceBetween>
+            {error && (
+              <StatusIndicator type="error">
+                {error}
+              </StatusIndicator>
+            )}
+            {result && (
+              <TextContent>
+                <h3>Response</h3>
+                <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+{JSON.stringify(result, null, 2)}
+                </pre>
+              </TextContent>
+            )}
           </SpaceBetween>
         </Container>
       </div>

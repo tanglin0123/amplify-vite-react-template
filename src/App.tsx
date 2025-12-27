@@ -12,8 +12,9 @@ import "@cloudscape-design/global-styles/index.css";
 import "./App.css";
 import { TaskManagement } from "./modules/TaskManagement";
 import { PlanningAnalytics } from "./modules/PlanningAnalytics";
+import { DataProcessing } from "./modules/DataProcessing";
 
-type ModuleType = "home" | "task-management" | "planning-analytics";
+type ModuleType = "home" | "task-management" | "planning-analytics" | "data-processing";
 
 function App() {
   const { user, signOut } = useAuthenticator();
@@ -61,16 +62,18 @@ function App() {
           <AppLayout
             navigation={
               <SideNavigation
-                activeHref={currentModule === "task-management" ? "#/task-management" : currentModule === "planning-analytics" ? "#/planning-analytics" : "#/"}
+                activeHref={currentModule === "task-management" ? "#/task-management" : currentModule === "planning-analytics" ? "#/planning-analytics" : currentModule === "data-processing" ? "#/data-processing" : "#/"}
                 onFollow={(event) => {
                   event.preventDefault();
                   if (event.detail.href === "#/") setCurrentModule("home");
                   else if (event.detail.href === "#/task-management") setCurrentModule("task-management");
                   else if (event.detail.href === "#/planning-analytics") setCurrentModule("planning-analytics");
+                  else if (event.detail.href === "#/data-processing") setCurrentModule("data-processing");
                 }}
                 items={[
                   { type: "link", text: "Task Management", href: "#/task-management" },
                   { type: "link", text: "Planning & Analytics", href: "#/planning-analytics" },
+                  { type: "link", text: "Data Processing", href: "#/data-processing" },
                 ]}
                 header={{
                   href: "#/",
@@ -85,7 +88,7 @@ function App() {
                     <p>Select a module from the navigation to get started.</p>
                   </TextContent>
                 </Container>
-              ) : currentModule === "task-management" ? <TaskManagement utcMode={utcMode} setUtcMode={setUtcMode} onNavigateHome={() => setCurrentModule("home")} /> : <PlanningAnalytics onNavigateHome={() => setCurrentModule("home")} />
+              ) : currentModule === "task-management" ? <TaskManagement utcMode={utcMode} setUtcMode={setUtcMode} onNavigateHome={() => setCurrentModule("home")} /> : currentModule === "planning-analytics" ? <PlanningAnalytics onNavigateHome={() => setCurrentModule("home")} /> : <DataProcessing onNavigateHome={() => setCurrentModule("home")} />
             }
             contentType="default"
             navigationOpen={navigationOpen}
