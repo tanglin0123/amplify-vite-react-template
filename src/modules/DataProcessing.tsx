@@ -29,6 +29,7 @@ export function DataProcessing({ onNavigateHome }: DataProcessingProps) {
   const [processType, setProcessType] = useState<string>("parallel");
   const [itemListInput, setItemListInput] = useState<string>("");
   const [maxConcurrency, setMaxConcurrency] = useState<string>("");
+  const [apiCallHistory, setApiCallHistory] = useState<Array<{ endpoint: string; method: string; request: any; response: any; timestamp: string }>>([]);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const showNotification = (item: { type: string; content: string; id?: string }) => {
@@ -43,6 +44,19 @@ export function DataProcessing({ onNavigateHome }: DataProcessingProps) {
     ]);
   };
 
+  const addApiCall = (endpoint: string, method: string, request: any, response: any) => {
+    setApiCallHistory((prev) => [
+      {
+        endpoint,
+        method,
+        request,
+        response,
+        timestamp: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+  };
+
   const checkExecution = async (executionId: string) => {
     setChecking(true);
     setStatus("Checking execution status...");
@@ -51,6 +65,8 @@ export function DataProcessing({ onNavigateHome }: DataProcessingProps) {
       const checkRes = await apiClient.get<{ status?: string; output?: any; [key: string]: any }>(
         `check?executionId=${executionId}`
       );
+
+      addApiCall(`check?executionId=${executionId}`, "GET", {}, checkRes.data);
 
       if (!checkRes.success) {
         setError(checkRes.error || "Failed to check status");
@@ -98,6 +114,7 @@ export function DataProcessing({ onNavigateHome }: DataProcessingProps) {
     setResult(null);
     setStatus(null);
     setNotifications([]);
+    setApiCallHistory([]);
 
     // Parse items from input - support both comma-separated and line-separated
     const items = itemListInput
@@ -131,6 +148,8 @@ export function DataProcessing({ onNavigateHome }: DataProcessingProps) {
       undefined
     );
 
+    addApiCall("trigger", "POST", requestPayload, res.data);
+
     if (res.success && res.data?.executionId) {
       showNotification({ type: "success", content: `Trigger initiated with ID: ${res.data.executionId}` });
       setLoading(false);
@@ -158,61 +177,121 @@ export function DataProcessing({ onNavigateHome }: DataProcessingProps) {
           }}
         />
       </div>
-      <div style={{ padding: "0" }}>
-        <Container header={<Header variant="h2">Data Processing</Header>}>
-          <SpaceBetween size="m" direction="vertical">
-            <Flashbar items={notifications} />
-            <FormField label="Items">
-              <Textarea
-                value={itemListInput}
-                onChange={(event) => setItemListInput(event.detail.value)}
-                placeholder="Enter a list of items (comma-separated or one per line)"
-                rows={6}
-              />
-            </FormField>
-            <SpaceBetween size="s" direction="horizontal">
-              <FormField label="Process Type">
-                <Select
-                  selectedOption={{ label: processType.charAt(0).toUpperCase() + processType.slice(1), value: processType }}
-                  onChange={(event) => setProcessType(event.detail.selectedOption.value || "parallel")}
-                  options={[
-                    { label: "Parallel", value: "parallel" },
-                    { label: "Loop", value: "loop" },
-                    { label: "Whole", value: "whole" },
-                  ]}
-                  selectedAriaLabel="Select process type"
+      <div style={{ padding: "0", display: "flex", gap: "0" }}>
+        <div style={{ flex: 1 }}>
+          <Container header={<Header variant="h2">Data Processing</Header>}>
+            <SpaceBetween size="m" direction="vertical">
+              <Flashbar items={notifications} />
+              <FormField label="Items">
+                <Textarea
+                  value={itemListInput}
+                  onChange={(event) => setItemListInput(event.detail.value)}
+                  placeholder="Enter a list of items (comma-separated or one per line)"
+                  rows={6}
                 />
               </FormField>
-              <FormField label="Max Concurrency">
-                <Input
-                  value={maxConcurrency}
-                  onChange={(event) => setMaxConcurrency(event.detail.value)}
-                  placeholder="Optional"
-                  type="number"
-                />
-              </FormField>
-            </SpaceBetween>
-            <SpaceBetween size="s" direction="horizontal">
-              <Button onClick={triggerAnalysis} variant="primary" iconName="refresh" disabled={loading || checking}>
-                Trigger Analysis
-              </Button>
-              {(loading || checking) && <StatusIndicator type="in-progress">{status || "Running…"}</StatusIndicator>}
-            </SpaceBetween>
-            {error && (
-              <StatusIndicator type="error">
-                {error}
-              </StatusIndicator>
-            )}
-            {result && (
-              <TextContent>
-                <h3>Response</h3>
-                <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              <SpaceBetween size="s" direction="horizontal">
+                <FormField label="Process Type">
+                  <Select
+                    selectedOption={{ label: processType.charAt(0).toUpperCase() + processType.slice(1), value: processType }}
+                    onChange={(event) => setProcessType(event.detail.selectedOption.value || "parallel")}
+                    options={[
+                      { label: "Parallel", value: "parallel" },
+                      { label: "Loop", value: "loop" },
+                      { label: "Whole", value: "whole" },
+                    ]}
+                    selectedAriaLabel="Select process type"
+                  />
+                </FormField>
+                <FormField label="Max Concurrency">
+                  <Input
+                    value={maxConcurrency}
+                    onChange={(event) => setMaxConcurrency(event.detail.value)}
+                    placeholder="Optional"
+                    type="number"
+                  />
+                </FormField>
+              </SpaceBetween>
+              <SpaceBetween size="s" direction="horizontal">
+                <Button onClick={triggerAnalysis} variant="primary" iconName="refresh" disabled={loading || checking}>
+                  Trigger Analysis
+                </Button>
+                {(loading || checking) && <StatusIndicator type="in-progress">{status || "Running…"}</StatusIndicator>}
+              </SpaceBetween>
+              {error && (
+                <StatusIndicator type="error">
+                  {error}
+                </StatusIndicator>
+              )}
+              {result && (
+                <TextContent>
+                  <h3>Response</h3>
+                  <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
 {JSON.stringify(result, null, 2)}
-                </pre>
-              </TextContent>
-            )}
-          </SpaceBetween>
-        </Container>
+                  </pre>
+                </TextContent>
+              )}
+            </SpaceBetween>
+          </Container>
+        </div>
+        <div style={{
+          width: "350px",
+          borderLeft: "1px solid #d5d8da",
+          overflowY: "auto",
+          backgroundColor: "#f8f9fa"
+        }}>
+          <div style={{ padding: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <Header variant="h3">API Call History</Header>
+              {apiCallHistory.length > 0 && (
+                <Button
+                  variant="icon"
+                  iconName="remove"
+                  onClick={() => setApiCallHistory([])}
+                  ariaLabel="Clear history"
+                />
+              )}
+            </div>
+            <SpaceBetween size="s" direction="vertical">
+              {apiCallHistory.length === 0 ? (
+                <TextContent>
+                  <p style={{ color: "#666", fontSize: "0.875rem" }}>No API calls yet</p>
+                </TextContent>
+              ) : (
+                apiCallHistory.map((call, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: "0.75rem",
+                      backgroundColor: "white",
+                      borderRadius: "4px",
+                      borderLeft: `3px solid ${call.method === "POST" ? "#0972d3" : "#059669"}`,
+                    }}
+                  >
+                    <div style={{ fontWeight: 500, fontSize: "0.875rem" }}>
+                      <span style={{ color: call.method === "POST" ? "#0972d3" : "#059669" }}>{call.method}</span> {call.endpoint}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.25rem" }}>
+                      {new Date(call.timestamp).toLocaleTimeString()}
+                    </div>
+                    <details style={{ marginTop: "0.5rem", fontSize: "0.75rem" }}>
+                      <summary style={{ cursor: "pointer", color: "#0972d3", marginBottom: "0.25rem" }}>Request</summary>
+                      <pre style={{ margin: "0.25rem 0 0 0", backgroundColor: "#f5f5f5", padding: "0.25rem", borderRadius: "2px", fontSize: "0.7rem", maxHeight: "80px", overflowY: "auto" }}>
+{JSON.stringify(call.request, null, 2)}
+                      </pre>
+                    </details>
+                    <details style={{ marginTop: "0.25rem", fontSize: "0.75rem" }}>
+                      <summary style={{ cursor: "pointer", color: "#059669", marginBottom: "0.25rem" }}>Response</summary>
+                      <pre style={{ margin: "0.25rem 0 0 0", backgroundColor: "#f5f5f5", padding: "0.25rem", borderRadius: "2px", fontSize: "0.7rem", maxHeight: "80px", overflowY: "auto" }}>
+{JSON.stringify(call.response, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                ))
+              )}
+            </SpaceBetween>
+          </div>
+        </div>
       </div>
     </SpaceBetween>
   );
