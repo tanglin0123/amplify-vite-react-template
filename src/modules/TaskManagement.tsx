@@ -43,14 +43,15 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
 
   const filteredTodos = todos.filter((todo) => {
     if (filter === "completed") return todo.state === "completed";
-    if (filter === "pending") return todo.state === "pending" || !todo.state;
+    if (filter === "in-progress") return todo.state === "in-progress";
+    if (filter === "not-started") return todo.state === "not-started" || !todo.state;
     return true;
   });
 
   function createTodo() {
     const content = window.prompt("Task content");
     if (content?.trim()) {
-      client.models.Todo.create({ content: content.trim() });
+      client.models.Todo.create({ content: content.trim(), state: "not-started" });
     }
   }
 
@@ -59,7 +60,11 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
   }
 
   function toggleTodoState(id: string, currentState: string | null | undefined) {
-    const newState = currentState === "completed" ? "pending" : "completed";
+    const state = currentState || "not-started";
+    let newState: string;
+    if (state === "not-started") newState = "in-progress";
+    else if (state === "in-progress") newState = "completed";
+    else newState = "not-started";
     client.models.Todo.update({ id, state: newState });
   }
 
@@ -111,8 +116,14 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
       flex: 1.2,
       minWidth: 140,
       cellRenderer: (params: ICellRendererParams<Schema["Todo"]["type"]>) => {
-        const state = params.value || "pending";
+        const state = params.value || "not-started";
         const id = params.data?.id;
+        const getStateDisplay = (state: string) => {
+          if (state === "completed") return { text: "Completed", bg: "#d4edda", color: "#155724" };
+          if (state === "in-progress") return { text: "In Progress", bg: "#fff3cd", color: "#856404" };
+          return { text: "Not Started", bg: "#e7e9eb", color: "#545b64" };
+        };
+        const display = getStateDisplay(state);
         return (
           <Button
             variant="inline-link"
@@ -121,12 +132,12 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
             <span style={{
               padding: "4px 8px",
               borderRadius: "4px",
-              backgroundColor: state === "completed" ? "#d4edda" : "#fff3cd",
-              color: state === "completed" ? "#155724" : "#856404",
+              backgroundColor: display.bg,
+              color: display.color,
               fontWeight: 500,
               cursor: "pointer",
             }}>
-              {state === "completed" ? "Completed" : "Pending"}
+              {display.text}
             </span>
           </Button>
         );
@@ -225,12 +236,19 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
                 Create Task
               </Button>
               <Select
-                selectedOption={{ label: filter === "all" ? "All" : filter === "completed" ? "Completed" : "Pending", value: filter }}
+                selectedOption={{ 
+                  label: filter === "all" ? "All" : 
+                         filter === "completed" ? "Completed" : 
+                         filter === "in-progress" ? "In Progress" : 
+                         "Not Started", 
+                  value: filter 
+                }}
                 onChange={(event) => setFilter(event.detail.selectedOption.value || "all")}
                 options={[
                   { label: "All", value: "all" },
+                  { label: "Not Started", value: "not-started" },
+                  { label: "In Progress", value: "in-progress" },
                   { label: "Completed", value: "completed" },
-                  { label: "Pending", value: "pending" },
                 ]}
                 selectedAriaLabel="Filter tasks"
               />
