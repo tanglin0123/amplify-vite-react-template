@@ -12,6 +12,10 @@ import {
   Container,
   BreadcrumbGroup,
   Select,
+  Modal,
+  Box,
+  Textarea,
+  FormField,
 } from "@cloudscape-design/components";
 
 const client = generateClient<Schema>();
@@ -25,6 +29,9 @@ interface TaskManagementProps {
 export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskManagementProps) {
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
   const [filter, setFilter] = useState<string>("all");
+  const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const getTimezoneName = () => {
     const formatter = new Intl.DateTimeFormat("en-US", {
@@ -74,10 +81,24 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
   });
 
   function createTodo() {
-    const content = window.prompt("Task content");
-    if (content?.trim()) {
-      const maxOrder = todos.length > 0 ? Math.max(...todos.map(t => t.order ?? 0)) : 0;
-      client.models.Todo.create({ content: content.trim(), state: "not-started", order: maxOrder + 1 });
+    setEditingTaskId(null);
+    setModalContent("");
+    setShowModal(true);
+  }
+
+  function handleSaveTask() {
+    if (modalContent.trim()) {
+      if (editingTaskId) {
+        // Edit mode
+        updateTodoContent(editingTaskId, modalContent);
+      } else {
+        // Create mode
+        const maxOrder = todos.length > 0 ? Math.max(...todos.map(t => t.order ?? 0)) : 0;
+        client.models.Todo.create({ content: modalContent.trim(), state: "not-started", order: maxOrder + 1 });
+      }
+      setModalContent("");
+      setEditingTaskId(null);
+      setShowModal(false);
     }
   }
 
@@ -149,11 +170,11 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
       headerName: "Content",
       flex: 3,
       minWidth: 250,
-      editable: true,
-      onCellValueChanged: (params) => {
-        if (params.data?.id && params.newValue !== params.oldValue) {
-          updateTodoContent(params.data.id, params.newValue);
-        }
+      editable: false,
+      onCellDoubleClicked: (params) => {
+        setEditingTaskId(params.data?.id || null);
+        setModalContent(params.value || "");
+        setShowModal(true);
       },
     },
     {
@@ -314,6 +335,40 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
           </SpaceBetween>
         </Container>
       </div>
+      <Modal
+        onDismiss={() => {
+          setShowModal(false);
+          setModalContent("");
+          setEditingTaskId(null);
+        }}
+        visible={showModal}
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button onClick={() => {
+                setShowModal(false);
+                setModalContent("");
+                setEditingTaskId(null);
+              }} variant="link">
+                Cancel
+              </Button>
+              <Button onClick={handleSaveTask} variant="primary">
+                {editingTaskId ? "Save" : "Create Task"}
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+        header={editingTaskId ? "Edit Task Content" : "Create New Task"}
+      >
+        <FormField label="Task Content">
+          <Textarea
+            value={modalContent}
+            onChange={(event) => setModalContent(event.detail.value)}
+            placeholder="Enter task content (supports multiple lines)"
+            rows={5}
+          />
+        </FormField>
+      </Modal>
     </SpaceBetween>
   );
 }
