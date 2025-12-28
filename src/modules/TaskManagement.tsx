@@ -112,12 +112,37 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
     }) + " " + localTz;
   };
 
+  async function updateTodoOrder(id: string, newOrder: number) {
+    try {
+      // Wait for the database update to complete
+      await client.models.Todo.update({ id, order: newOrder });
+      
+      // After successful save, update local state and re-sort
+      const updatedTodos = todos.map(t => t.id === id ? { ...t, order: newOrder } : t);
+      const sorted = updatedTodos.sort((a, b) => {
+        const orderA = a.order ?? 999999;
+        const orderB = b.order ?? 999999;
+        return orderA - orderB;
+      });
+      setTodos(sorted);
+    } catch (error) {
+      console.error("Error updating task order:", error);
+    }
+  }
+
   const columnDefs: ColDef<Schema["Todo"]["type"]>[] = [
     {
       field: "order" as const,
       headerName: "#",
       width: 70,
       cellStyle: { textAlign: "center", fontWeight: 600 },
+      editable: true,
+      onCellValueChanged: (params) => {
+        const newOrder = parseInt(params.newValue);
+        if (!isNaN(newOrder) && params.data?.id) {
+          updateTodoOrder(params.data.id, newOrder);
+        }
+      },
     },
     {
       field: "content" as const,
