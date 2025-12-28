@@ -36,8 +36,33 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
   };
 
   useEffect(() => {
+    const populateOrderForExistingTasks = async () => {
+      const { data: allTodos } = await client.models.Todo.list();
+      const todosWithoutOrder = allTodos.filter(todo => todo.order == null);
+      
+      if (todosWithoutOrder.length > 0) {
+        console.log(`Populating order for ${todosWithoutOrder.length} tasks...`);
+        for (let i = 0; i < todosWithoutOrder.length; i++) {
+          await client.models.Todo.update({
+            id: todosWithoutOrder[i].id,
+            order: i + 1
+          });
+        }
+        console.log('Order population complete!');
+      }
+    };
+
+    populateOrderForExistingTasks();
+
     client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
+      next: (data) => {
+        const sorted = [...data.items].sort((a, b) => {
+          const orderA = a.order ?? 999999;
+          const orderB = b.order ?? 999999;
+          return orderA - orderB;
+        });
+        setTodos(sorted);
+      },
     });
   }, []);
 
@@ -51,7 +76,8 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
   function createTodo() {
     const content = window.prompt("Task content");
     if (content?.trim()) {
-      client.models.Todo.create({ content: content.trim(), state: "not-started" });
+      const maxOrder = todos.length > 0 ? Math.max(...todos.map(t => t.order ?? 0)) : 0;
+      client.models.Todo.create({ content: content.trim(), state: "not-started", order: maxOrder + 1 });
     }
   }
 
@@ -88,15 +114,10 @@ export function TaskManagement({ utcMode, setUtcMode, onNavigateHome }: TaskMana
 
   const columnDefs: ColDef<Schema["Todo"]["type"]>[] = [
     {
-      field: "id" as const,
-      headerName: "ID",
-      flex: 0.7,
-      minWidth: 140,
-      cellRenderer: (params: { value: string }) => (
-        <span style={{ fontFamily: "monospace", fontSize: "0.75em", color: "#333", wordBreak: "break-all" }}>
-          {params.value}
-        </span>
-      ),
+      field: "order" as const,
+      headerName: "#",
+      width: 70,
+      cellStyle: { textAlign: "center", fontWeight: 600 },
     },
     {
       field: "content" as const,
