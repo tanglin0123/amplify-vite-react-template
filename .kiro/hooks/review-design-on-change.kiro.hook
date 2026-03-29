@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Review Design on File Change",
+  "description": "When any source file is edited, automatically reviews the design document and updates it if the changes affect architecture, components, data models, or correctness properties.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "amplify/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just edited. Review the changes and check whether the design document at .kiro/specs/myworkspace-app/design.md needs to be updated to reflect the new or modified behavior. Consider whether the architecture, component interfaces, data models, correctness properties, or testing strategy are affected. If an update is needed, update the design document directly without asking — keep it in sync with the code."
+  }
+}

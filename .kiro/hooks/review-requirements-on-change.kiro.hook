@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Review Requirements on File Change",
+  "description": "When any source file is edited, prompts a review of the requirements document to check if it needs updating based on the changes made.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "amplify/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just edited. Review the changes and check whether the requirements document at .kiro/specs/myworkspace-app/requirements.md needs to be updated to reflect the new or modified behavior. If an update is needed, update the requirements document directly without asking — keep it in sync with the code."
+  }
+}
